@@ -1,0 +1,157 @@
+{% extends 'apps/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - Inventory System{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'stock_transactions' %}">Stock</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+            
+            <h2 class="h4 mb-0">
+                <i class="fas fa-{% if title == 'Stock In' %}arrow-down{% else %}arrow-up{% endif %} me-2"></i>
+                {{ title }}
+            </h2>
+            <p class="text-muted">
+                {% if title == 'Stock In' %}
+                Add stock to inventory
+                {% else %}
+                Remove stock from inventory
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.product|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.transaction_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.quantity|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.reference|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'stock_transactions' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Save Transaction
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-2"></i> Stock Information
+                </div>
+                <div class="card-body">
+                    <div id="stockInfo">
+                        <p class="text-muted text-center py-4">
+                            Select a product to view current stock information
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-history me-2"></i> Recent Transactions
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for transaction in recent_transactions|slice:":5" %}
+                        <li class="list-group-item">
+                            <small>
+                                {{ transaction.product.name|truncatechars:20 }}
+                                <span class="float-end">
+                                    {% if transaction.transaction_type == 'in' %}
+                                    <span class="text-success">+{{ transaction.quantity }}</span>
+                                    {% else %}
+                                    <span class="text-danger">-{{ transaction.quantity }}</span>
+                                    {% endif %}
+                                </span>
+                                <br>
+                                <small class="text-muted">{{ transaction.created_at|timesince }} ago</small>
+                            </small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">
+                            No recent transactions
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get product information when product is selected
+    $(document).ready(function() {
+        $('#id_product').change(function() {
+            const productId = $(this).val();
+            if (productId) {
+                $.getJSON(`/api/product/${productId}/`, function(data) {
+                    if (!data.error) {
+                        $('#stockInfo').html(`
+                            <div class="text-center">
+                                <h5>${data.name}</h5>
+                                <div class="mb-3">
+                                    <span class="badge bg-primary">Current Stock: ${data.stock}</span>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Price: $${data.price.toFixed(2)}<br>
+                                    Stock will be ${$('#id_transaction_type').val() == 'in' ? 'increased' : 'decreased'} by the quantity entered.
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+            } else {
+                $('#stockInfo').html(`
+                    <p class="text-muted text-center py-4">
+                        Select a product to view current stock information
+                    </p>
+                `);
+            }
+        });
+        
+        // Set transaction type based on page
+        $('#id_transaction_type').val('{{ title|lower|cut:" " }}');
+    });
+</script>
+{% endblock %}

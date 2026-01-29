@@ -1,0 +1,46 @@
+{% extends 'apps/base.html' %}
+
+{% block title %}Login - Inventory System{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2><i class="fas fa-boxes me-2"></i>Inventory System</h2>
+            <p>Sign in to your account</p>
+        </div>
+        
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_username" class="form-label">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="text-danger small">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-4">
+                <label for="id_password" class="form-label">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="text-danger small">{{ form.password.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <p class="small text-muted">
+                    Forgot your password? Contact system administrator.
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

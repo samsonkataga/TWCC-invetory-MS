@@ -1,0 +1,310 @@
+{% extends 'apps/base.html' %}
+
+{% block title %}Invoice #{{ sale.invoice_number }} - Inventory System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .invoice-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .invoice-header {
+        border-bottom: 3px solid #1a237e;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .invoice-title {
+        color: #1a237e;
+        font-weight: 700;
+        font-size: 2rem;
+    }
+    .invoice-subtitle {
+        color: #666;
+        font-size: 1.1rem;
+    }
+    .invoice-info-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #1a237e;
+    }
+    .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+    }
+    .invoice-table thead th {
+        background-color: #1a237e;
+        color: white;
+        padding: 12px 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+    .invoice-table tbody td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .invoice-table tbody tr:last-child td {
+        border-bottom: 2px solid #1a237e;
+    }
+    .invoice-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .text-right {
+        text-align: right;
+    }
+    .text-center {
+        text-align: center;
+    }
+    .total-row {
+        font-weight: 700;
+        background-color: #f8f9fa;
+    }
+    .grand-total {
+        font-size: 1.3rem;
+        color: #1a237e;
+        font-weight: 700;
+    }
+    .invoice-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #dee2e6;
+        text-align: center;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+    .badge-paid {
+        background-color: #28a745;
+        color: white;
+    }
+    .badge-unpaid {
+        background-color: #dc3545;
+        color: white;
+    }
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .invoice-container {
+            box-shadow: none;
+            padding: 20px;
+        }
+        body {
+            background: white !important;
+            font-size: 12px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <!-- Action Buttons (Non-printable) -->
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h4 mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        Invoice #{{ sale.invoice_number }}
+                    </h2>
+                    <p class="text-muted mb-0">{{ sale.created_at|date:"F d, Y H:i" }}</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary me-2">
+                        <i class="fas fa-print me-2"></i> Print Invoice
+                    </button>
+                    <a href="{% url 'sale_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="invoice-container">
+        <!-- Invoice Header -->
+        <div class="invoice-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="invoice-title mb-1">INVOICE</h1>
+                    <p class="invoice-subtitle mb-0">Generated automatically from Inventory System</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="invoice-info-box">
+                        <div class="row">
+                            <div class="col-6 text-start">
+                                <strong>Invoice #:</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                {{ sale.invoice_number }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6 text-start">
+                                <strong>Date:</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                {{ sale.created_at|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6 text-start">
+                                <strong>Time:</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                {{ sale.created_at|time:"H:i" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Details -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="invoice-info-box">
+                    <h6 class="mb-3"><i class="fas fa-user me-2"></i> Customer Details</h6>
+                    <p class="mb-1"><strong>Name:</strong> {{ sale.customer_name|default:"Walk-in Customer" }}</p>
+                    {% if sale.customer_phone %}
+                    <p class="mb-1"><strong>Phone:</strong> {{ sale.customer_phone }}</p>
+                    {% endif %}
+                    <p class="mb-0"><strong>Invoice Date:</strong> {{ sale.created_at|date:"F d, Y" }}</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="invoice-info-box">
+                    <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i> Sale Information</h6>
+                    <p class="mb-1"><strong>Sold By:</strong> {{ sale.created_by.username }}</p>
+                    <p class="mb-1"><strong>Payment Method:</strong> {{ sale.get_payment_method_display }}</p>
+                    <p class="mb-0">
+                        <strong>Status:</strong> 
+                        <span class="status-badge {% if sale.payment_status %}badge-paid{% else %}badge-unpaid{% endif %}">
+                            {% if sale.payment_status %}PAID{% else %}UNPAID{% endif %}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Items Table -->
+        <h5 class="mb-3"><i class="fas fa-list me-2"></i> Items List</h5>
+        <div class="table-responsive">
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product Name</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-right">Unit Price</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sale.items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.product_name }}</td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-right">TZS {{ item.price|floatformat:2 }}</td>
+                        <td class="text-right">TZS {{ item.total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="3"></td>
+                        <td class="text-right"><strong>Subtotal:</strong></td>
+                        <td class="text-right">TZS {{ sale.total_amount|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3"></td>
+                        <td class="text-right"><strong>Tax (0%):</strong></td>
+                        <td class="text-right">TZS 0.00</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td colspan="3"></td>
+                        <td class="text-right"><strong>TOTAL:</strong></td>
+                        <td class="text-right">TZS {{ sale.total_amount|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i> System Information</h6>
+                    <p class="mb-1 small">Invoice ID: {{ sale.id }}</p>
+                    <p class="mb-1 small">Generated: {{ sale.created_at|date:"Y-m-d H:i:s" }}</p>
+                    <p class="mb-0 small">System: Inventory Management</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-light">
+                    <h6 class="mb-2"><i class="fas fa-sticky-note me-2"></i> Notes</h6>
+                    <p class="mb-0 small">This invoice was automatically generated by the system. Please keep this document for your records.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="invoice-footer">
+            <p class="mb-1">
+                <strong>Inventory Management System</strong> | 
+                Oasis Office Park | P.O.BOX 5591 | Phone: +255 757 823 982
+            </p>
+            <p class="mb-0">Thank you for your business!</p>
+        </div>
+
+        <!-- Quick Actions (Non-printable) -->
+        <div class="row mt-4 no-print">
+            <div class="col-12 text-center">
+                <div class="btn-group" role="group">
+                    <button onclick="window.print()" class="btn btn-outline-primary">
+                        <i class="fas fa-print me-2"></i> Print
+                    </button>
+                    <a href="{% url 'sale_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i> All Sales
+                    </a>
+                    <a href="{% url 'create_sale' %}" class="btn btn-outline-success">
+                        <i class="fas fa-plus me-2"></i> New Sale
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-print if URL has print parameter
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('print')) {
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        }
+        
+        // Keyboard shortcut for printing
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    });
+</script>
+{% endblock %}

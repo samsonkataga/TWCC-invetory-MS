@@ -1,0 +1,311 @@
+{% extends 'apps/base.html' %}
+
+{% block title %}Reports - Inventory System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    .report-card {
+        transition: transform 0.3s;
+    }
+    .report-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h4 mb-0"><i class="fas fa-chart-bar me-2"></i>Reports & Analytics</h2>
+            <p class="text-muted">View business insights and analytics</p>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3"><i class="fas fa-calendar-alt me-2"></i>Select Date Range</h5>
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="start_date" class="form-control" 
+                           value="{{ start_date }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="end_date" class="form-control" 
+                           value="{{ end_date }}" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i> Generate
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'reports' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-redo me-2"></i> Reset
+                    </a>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" onclick="window.print()" class="btn btn-info w-100">
+                        <i class="fas fa-print me-2"></i> Print
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card report-card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x mb-3"></i>
+                    <h3>TZS {{ total_sales|floatformat:2 }}</h3>
+                    <p class="mb-0">Total Sales</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card report-card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                    <h3>{{ total_transactions }}</h3>
+                    <p class="mb-0">Total Transactions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card report-card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-2x mb-3"></i>
+                    <h3>{{ average_sale|floatformat:2 }}</h3>
+                    <p class="mb-0">Avg. Sale Value</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card report-card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x mb-3"></i>
+                    <h3>{{ growth_rate|default:"0" }}%</h3>
+                    <p class="mb-0">Growth Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-2"></i> Sales Trend
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie me-2"></i> Payment Methods
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Products -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-star me-2"></i> Top Selling Products
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Product Name</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Total Revenue</th>
+                                    <th>Avg. Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_products %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary rounded-circle p-2">
+                                            {{ forloop.counter }}
+                                        </span>
+                                    </td>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.quantity }}</td>
+                                    <td class="fw-bold">${{ product.revenue|floatformat:2 }}</td>
+                                    <td> TZS {{ product.avg_price|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-chart-bar fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No sales data available for the selected period.</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history me-2"></i> Recent Sales (Last 50)
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.invoice_number }}</td>
+                                    <td>{{ sale.created_at|date:"M d, Y H:i" }}</td>
+                                    <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                    <td>{{ sale.items|length }} items</td>
+                                    <td class="fw-bold"> TZS {{ sale.total_amount|floatformat:2 }}</td>
+                                    <td>{{ sale.get_payment_method_display }}</td>
+                                    <td>
+                                        {% if sale.payment_status %}
+                                        <span class="badge bg-success">Paid</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Unpaid</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-receipt fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No sales found for the selected period.</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sample data for charts - In a real application, this would come from the backend
+    const salesData = {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'Sales (TZS)',
+            data: [12000, 19000, 15000, 25000, 22000, 30000],
+            borderColor: '#1a237e',
+            backgroundColor: 'rgba(26, 35, 126, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    };
+
+    const paymentData = {
+        labels: ['Cash', 'Card', 'Transfer', 'Credit'],
+        datasets: [{
+            data: [45, 30, 15, 10],
+            backgroundColor: [
+                '#1a237e',
+                '#3949ab',
+                '#5c6bc0',
+                '#7986cb'
+            ]
+        }]
+    };
+
+    // Initialize charts
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sales Chart
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        new Chart(salesCtx, {
+            type: 'line',
+            data: salesData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return ' TZS ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Payment Chart
+        const paymentCtx = document.getElementById('paymentChart').getContext('2d');
+        new Chart(paymentCtx, {
+            type: 'pie',
+            data: paymentData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

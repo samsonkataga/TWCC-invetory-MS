@@ -1,0 +1,210 @@
+{% extends 'apps/base.html' %}
+
+{% block title %}Stock Transactions - Inventory System{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="h4 mb-0"><i class="fas fa-exchange-alt me-2"></i>Stock Transactions</h2>
+            <p class="text-muted">Track all stock movements and adjustments</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{% url 'stock_in' %}" class="btn btn-success">
+                    <i class="fas fa-arrow-down me-2"></i> Stock In
+                </a>
+                <a href="{% url 'stock_out' %}" class="btn btn-warning">
+                    <i class="fas fa-arrow-up me-2"></i> Stock Out
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="start_date" class="form-control" 
+                           value="{{ request.GET.start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="end_date" class="form-control" 
+                           value="{{ request.GET.end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Transaction Type</label>
+                    <select name="type" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="in" {% if request.GET.type == 'in' %}selected{% endif %}>Stock In</option>
+                        <option value="out" {% if request.GET.type == 'out' %}selected{% endif %}>Stock Out</option>
+                        <option value="adjust" {% if request.GET.type == 'adjust' %}selected{% endif %}>Adjustment</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Reference</th>
+                            <th>Notes</th>
+                            <th>User</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <strong>{{ transaction.product.name }}</strong><br>
+                                <small class="text-muted">{{ transaction.product.sku }}</small>
+                            </td>
+                            <td>
+                                {% if transaction.transaction_type == 'in' %}
+                                <span class="badge bg-success">IN</span>
+                                {% elif transaction.transaction_type == 'out' %}
+                                <span class="badge bg-danger">OUT</span>
+                                {% else %}
+                                <span class="badge bg-warning">ADJUST</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold {% if transaction.transaction_type == 'in' %}text-success{% else %}text-danger{% endif %}">
+                                    {% if transaction.transaction_type == 'in' %}+{% else %}-{% endif %}{{ transaction.quantity }}
+                                </span>
+                            </td>
+                            <td>{{ transaction.reference|default:"-" }}</td>
+                            <td>{{ transaction.notes|truncatechars:50|default:"-" }}</td>
+                            <td>
+                                <small>{{ transaction.created_by.username }}</small>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#detailModal{{ transaction.id }}">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Detail Modal -->
+                        <div class="modal fade" id="detailModal{{ transaction.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Transaction Details</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <dl class="row">
+                                            <dt class="col-sm-4">Product:</dt>
+                                            <dd class="col-sm-8">{{ transaction.product.name }}</dd>
+                                            
+                                            <dt class="col-sm-4">SKU:</dt>
+                                            <dd class="col-sm-8">{{ transaction.product.sku }}</dd>
+                                            
+                                            <dt class="col-sm-4">Type:</dt>
+                                            <dd class="col-sm-8">
+                                                {% if transaction.transaction_type == 'in' %}
+                                                <span class="badge bg-success">Stock In</span>
+                                                {% elif transaction.transaction_type == 'out' %}
+                                                <span class="badge bg-danger">Stock Out</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">Adjustment</span>
+                                                {% endif %}
+                                            </dd>
+                                            
+                                            <dt class="col-sm-4">Quantity:</dt>
+                                            <dd class="col-sm-8">{{ transaction.quantity }}</dd>
+                                            
+                                            <dt class="col-sm-4">Reference:</dt>
+                                            <dd class="col-sm-8">{{ transaction.reference|default:"-" }}</dd>
+                                            
+                                            <dt class="col-sm-4">Notes:</dt>
+                                            <dd class="col-sm-8">{{ transaction.notes|default:"-" }}</dd>
+                                            
+                                            <dt class="col-sm-4">User:</dt>
+                                            <dd class="col-sm-8">{{ transaction.created_by.username }}</dd>
+                                            
+                                            <dt class="col-sm-4">Date:</dt>
+                                            <dd class="col-sm-8">{{ transaction.created_at }}</dd>
+                                        </dl>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-exchange-alt fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">No transactions found.</p>
+                                <a href="{% url 'stock_in' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i> Add First Transaction
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-arrow-down me-2"></i>Total Stock In</h5>
+                            <h3>{{ total_in }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-arrow-up me-2"></i>Total Stock Out</h5>
+                            <h3>{{ total_out }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-list me-2"></i>Total Transactions</h5>
+                            <h3>{{ total_transactions }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add context to the view
+    document.addEventListener('DOMContentLoaded', function() {
+        // You can add JavaScript functionality here if needed
+    });
+</script>
+{% endblock %}

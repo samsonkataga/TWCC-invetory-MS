@@ -1,0 +1,178 @@
+{% extends 'apps/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Profile - Inventory System{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h4 mb-0"><i class="fas fa-user-circle me-2"></i>My Profile</h2>
+            <p class="text-muted">Manage your account information</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <!-- Profile Card -->
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        {% if form.instance.profile_picture %}
+                        <img src="{{ form.instance.profile_picture.url }}" 
+                             alt="{{ user.username }}" 
+                             class="rounded-circle" 
+                             width="150" height="150">
+                        {% else %}
+                        <div class="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center" 
+                             style="width: 150px; height: 150px;">
+                            <span class="text-white" style="font-size: 60px;">
+                                {{ user.username|first|upper }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h4>{{ user.get_full_name|default:user.username }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    
+                    <div class="mb-3">
+                        {% if user.is_superuser %}
+                        <span class="badge bg-danger">Super Admin</span>
+                        {% elif user.is_staff %}
+                        <span class="badge bg-warning">Administrator</span>
+                        {% else %}
+                        <span class="badge bg-info">Staff</span>
+                        {% endif %}
+                        
+                        {% if user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-muted">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Joined: {{ user.date_joined|date:"M d, Y" }}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i> My Activity
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Sales Made
+                            <span class="badge bg-primary rounded-pill">{{ user_sales_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Products Added
+                            <span class="badge bg-success rounded-pill">{{ user_products_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Stock Transactions
+                            <span class="badge bg-warning rounded-pill">{{ user_transactions_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Last Login
+                            <small class="text-muted">{{ user.last_login|date:"M d, Y H:i" }}</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control" value="{{ user.first_name }}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" class="form-control" value="{{ user.last_name }}" readonly>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3">Profile Information</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.role|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.profile_picture|as_crispy_field }}
+                            {% if form.instance.profile_picture %}
+                            <div class="mt-2">
+                                <img src="{{ form.instance.profile_picture.url }}" 
+                                     alt="Current Profile Picture" 
+                                     class="img-thumbnail" width="100">
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Change Password -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-key me-2"></i> Change Password
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Contact your system administrator to change your password.
+                        </div>
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="fas fa-envelope me-2"></i> Request Password Change
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
