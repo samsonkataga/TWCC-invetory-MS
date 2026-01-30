@@ -1,0 +1,521 @@
+{% extends 'apps/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Profit & Loss Report - Inventory System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .financial-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        color: white;
+    }
+    .revenue-card {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    }
+    .expense-card {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    .profit-card {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    }
+    .loss-card {
+        background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    .percentage-change {
+        font-size: 0.9rem;
+        padding: 3px 8px;
+        border-radius: 10px;
+    }
+    .positive-change {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .negative-change {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="h4 mb-0"><i class="fas fa-calculator me-2"></i>Profit & Loss Report</h2>
+            <p class="text-muted">Analyze your business profitability</p>
+        </div>
+    </div>
+
+    <!-- Report Filter Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-calendar-alt me-2"></i> Select Report Period
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Report Type</label>
+                    <select name="report_type" class="form-control">
+                        <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if report_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="quarterly" {% if report_type == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                        <option value="yearly" {% if report_type == 'yearly' %}selected{% endif %}>Yearly</option>
+                        <option value="custom" {% if report_type == 'custom' %}selected{% endif %}>Custom</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Options</label>
+                    <div class="form-check mt-2">
+                        <input type="checkbox" name="include_details" class="form-check-input" id="includeDetails" 
+                               {% if include_details %}checked{% endif %}>
+                        <label class="form-check-label" for="includeDetails">
+                            Include Details
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-chart-bar me-2"></i> Generate Report
+                    </button>
+                    <button type="button" onclick="window.print()" class="btn btn-info">
+                        <i class="fas fa-print me-2"></i> Print Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="financial-card revenue-card">
+                <h5 class="text-white-50 mb-2">Total Revenue</h5>
+                <h2 class="text-white">TZS{{ total_sales|floatformat:2 }}</h2>
+                <div class="d-flex align-items-center mt-3">
+                    <i class="fas fa-arrow-up me-2"></i>
+                    <span>Sales from {{ start_date }} to {{ end_date }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="financial-card expense-card">
+                <h5 class="text-white-50 mb-2">Total Expenses</h5>
+                <h2 class="text-white">TZS{{ total_expenses|floatformat:2 }}</h2>
+                <div class="d-flex align-items-center mt-3">
+                    <i class="fas fa-arrow-down me-2"></i>
+                    <span>All business expenses</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="financial-card 
+                {% if gross_profit >= 0 %}profit-card{% else %}loss-card{% endif %}">
+                <h5 class="text-white-50 mb-2">Gross Profit</h5>
+                <h2 class="text-white">TZS{{ gross_profit|floatformat:2 }}</h2>
+                <div class="mt-3">
+                    <span class="percentage-change {% if gross_profit >= 0 %}positive-change{% else %}negative-change{% endif %}">
+                        {% if total_sales > 0 %}
+                        {{ gross_profit|floatformat:2 }}%
+                        {% else %}0%{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="financial-card 
+                {% if net_profit >= 0 %}profit-card{% else %}loss-card{% endif %}">
+                <h5 class="text-white-50 mb-2">Net Profit</h5>
+                <h2 class="text-white">TZS{{ net_profit|floatformat:2 }}</h2>
+                <div class="mt-3">
+                    <span class="percentage-change {% if net_profit >= 0 %}positive-change{% else %}negative-change{% endif %}">
+                        {% if total_sales > 0 %}
+                        {{ net_profit|floatformat:2 }}%
+                        {% else %}0%{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown -->
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Profit & Loss Statement -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-file-invoice-dollar me-2"></i> Profit & Loss Statement
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th colspan="2">Financial Summary</th>
+                                    <th class="text-end">Amount (TZS)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Revenue Section -->
+                                <tr class="table-success">
+                                    <td colspan="2"><strong>REVENUE</strong></td>
+                                    <td class="text-end"><strong>TZS{{ total_sales|floatformat:2 }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Total Sales</td>
+                                    <td class="text-end">TZS{{ total_sales|floatformat:2 }}</td>
+                                </tr>
+                                {% if other_income > 0 %}
+                                <tr>
+                                    <td></td>
+                                    <td>Other Income</td>
+                                    <td class="text-end">TZS{{ other_income|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                                
+                                <!-- Cost of Goods Sold -->
+                                <tr class="table-warning">
+                                    <td colspan="2"><strong>COST OF GOODS SOLD (COGS)</strong></td>
+                                    <td class="text-end"><strong>TZS{{ cogs|floatformat:2 }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>Cost of Products Sold</td>
+                                    <td class="text-end">TZS{{ cogs|floatformat:2 }}</td>
+                                </tr>
+                                
+                                <!-- Gross Profit -->
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>GROSS PROFIT</strong></td>
+                                    <td class="text-end"><strong>TZS{{ gross_profit|floatformat:2 }}</strong></td>
+                                </tr>
+                                
+                                <!-- Expenses -->
+                                <tr class="table-danger">
+                                    <td colspan="2"><strong>OPERATING EXPENSES</strong></td>
+                                    <td class="text-end"><strong>TZS{{ total_expenses|floatformat:2 }}</strong></td>
+                                </tr>
+                                
+                                {% for expense_type in expense_by_type %}
+                                <tr>
+                                    <td></td>
+                                    <td>{{ expense_type.expense_type|title }}</td>
+                                    <td class="text-end">TZS{{ expense_type.total|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                
+                                <!-- Net Profit -->
+                                <tr class="{% if net_profit >= 0 %}table-success{% else %}table-danger{% endif %}">
+                                    <td colspan="2"><strong>NET PROFIT/LOSS</strong></td>
+                                    <td class="text-end">
+                                        <strong>TZS{{ net_profit|floatformat:2 }}</strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Trend Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-2"></i> Monthly Performance Trend
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Expense Breakdown -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie me-2"></i> Expense Breakdown
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        {% for item in expense_breakdown %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ item.category__name|default:"Uncategorized" }}</span>
+                            <span class="fw-bold">TZS{{ item.total|floatformat:2 }}</span>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center">No expense data</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i> Key Metrics
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Profit Margin</span>
+                            <span class="badge bg-{% if net_profit >= 0 %}success{% else %}danger{% endif %}">
+                                {% if total_sales > 0 %}
+                                {{ net_profit|floatformat:2 }}%
+                                {% else %}0%{% endif %}
+                            </span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Expense Ratio</span>
+                            <span class="badge bg-warning">
+                                {% if total_sales > 0 %}
+                                {{ total_expenses|floatformat:2 }}%
+                                {% else %}0%{% endif %}
+                            </span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Sales per Day</span>
+                            <span class="badge bg-info">
+                                TZS{{ daily_sales|floatformat:2|default:"0.00" }}
+                            </span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Expense per Day</span>
+                            <span class="badge bg-danger">
+                                TZS{{ daily_expense|floatformat:2|default:"0.00" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Lists (if included) -->
+    {% if include_details %}
+    <div class="row mt-4">
+        <!-- Sales Details -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-shopping-cart me-2"></i> Recent Sales ({{ sales.count }})
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Invoice</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.created_at|date:"M d" }}</td>
+                                    <td>{{ sale.invoice_number }}</td>
+                                    <td>{{ sale.customer.name|default:"Walk-in" }}</td>
+                                    <td class="text-success">TZS{{ sale.total_amount|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No sales found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Details -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-money-bill-wave me-2"></i> Recent Expenses ({{ expenses.count }})
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.date|date:"M d" }}</td>
+                                    <td>{{ expense.description|truncatechars:30 }}</td>
+                                    <td>{{ expense.category.name|default:"-" }}</td>
+                                    <td class="text-danger">TZS{{ expense.amount|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No expenses found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Report Footer -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-0">
+                        Report generated on {{ now|date:"F d, Y H:i" }} | 
+                        Period: {{ start_date }} to {{ end_date }} |
+                        Total Records: {{ sales.count|add:expenses.count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Monthly Trend Chart
+    const trendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+    const monthlyLabels = [
+        {% for month in monthly_data %}
+        "{{ month.month }}",
+        {% endfor %}
+    ];
+    
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [
+                {
+                    label: 'Sales',
+                    data: [
+                        {% for month in monthly_data %}
+                        {{ month.sales|default:0 }},
+                        {% endfor %}
+                    ],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Expenses',
+                    data: [
+                        {% for month in monthly_data %}
+                        {{ month.expenses|default:0 }},
+                        {% endfor %}
+                    ],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Profit',
+                    data: [
+                        {% for month in monthly_data %}
+                        {{ month.profit|default:0 }},
+                        {% endfor %}
+                    ],
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'TZS' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Expense Breakdown Chart
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    const expenseLabels = [
+        {% for item in expense_breakdown %}
+        "{{ item.category__name|default:'Uncategorized'|truncatechars:15 }}",
+        {% endfor %}
+    ];
+    
+    new Chart(expenseCtx, {
+        type: 'doughnut',
+        data: {
+            labels: expenseLabels,
+            datasets: [{
+                data: [
+                    {% for item in expense_breakdown %}
+                    {{ item.total|default:0 }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997',
+                    '#17a2b8', '#6f42c1', '#e83e8c', '#343a40', '#007bff'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

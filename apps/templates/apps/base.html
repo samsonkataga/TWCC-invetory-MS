@@ -57,11 +57,38 @@
                         </a>
                     </li>
                     {% endif %}
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link" href="{% url 'reports' %}">
                             <i class="fas fa-chart-bar me-1"></i> Reports
                         </a>
-                    </li>
+                    </li> -->
+
+                    <!-- In your navbar, add these items after the Stock link -->
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'expense_list' %}">
+        <i class="fas fa-money-bill-wave me-1"></i> Expenses
+    </a>
+</li>
+
+<!-- In the Reports dropdown (you might want to make Reports a dropdown) -->
+<!-- Or replace the current Reports link with a dropdown -->
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
+        <i class="fas fa-chart-bar me-1"></i> Reports
+    </a>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="{% url 'reports' %}">
+            <i class="fas fa-chart-line me-2"></i> Sales Reports
+        </a></li>
+        <li><a class="dropdown-item" href="{% url 'profit_loss_report' %}">
+            <i class="fas fa-calculator me-2"></i> Profit & Loss
+        </a></li>
+        <li><a class="dropdown-item" href="{% url 'expense_list' %}">
+            <i class="fas fa-file-invoice-dollar me-2"></i> Expense Reports
+        </a></li>
+    </ul>
+</li>
+                    
                 </ul>
                 
                 <ul class="navbar-nav">

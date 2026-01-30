@@ -38,4 +38,13 @@ urlpatterns = [
     
     # AJAX endpoints
     path('api/product/<int:product_id>/', views.get_product_info, name='get_product_info'),
+    path('expenses/', views.expense_list, name='expense_list'),
+    path('expenses/create/', views.expense_create, name='expense_create'),
+    path('expenses/edit/<int:pk>/', views.expense_edit, name='expense_edit'),
+    path('expenses/delete/<int:pk>/', views.expense_delete, name='expense_delete'),
+    path('expenses/categories/', views.expense_category_list, name='expense_category_list'),
+    path('expenses/categories/create/', views.expense_category_create, name='expense_category_create'),
+
+    # Reports URLs
+    path('reports/profit-loss/', views.profit_loss_report, name='profit_loss_report'),
 ]

@@ -576,3 +576,230 @@ def get_product_info(request, product_id):
         })
     except Product.DoesNotExist:
         return JsonResponse({'error': 'Product not found'}, status=404)
+
+
+# Add these imports at the top
+from django.db.models import Sum, Count, Q, Avg, F
+from datetime import datetime, timedelta
+
+# Add these views after your existing views
+
+@login_required
+def expense_list(request):
+    expenses = Expense.objects.select_related('category', 'created_by').order_by('-date', '-created_at')
+    categories = ExpenseCategory.objects.all()
+    form = ExpenseFilterForm(request.GET or None)
+    
+    if form.is_valid():
+        category = form.cleaned_data.get('category')
+        expense_type = form.cleaned_data.get('expense_type')
+        start_date = form.cleaned_data.get('start_date')
+        end_date = form.cleaned_data.get('end_date')
+        payment_method = form.cleaned_data.get('payment_method')
+        
+        if category:
+            expenses = expenses.filter(category=category)
+        if expense_type:
+            expenses = expenses.filter(expense_type=expense_type)
+        if start_date and end_date:
+            expenses = expenses.filter(date__range=[start_date, end_date])
+        elif start_date:
+            expenses = expenses.filter(date__gte=start_date)
+        elif end_date:
+            expenses = expenses.filter(date__lte=end_date)
+        if payment_method:
+            expenses = expenses.filter(payment_method=payment_method)
+    
+    # Calculate totals
+    total_expenses = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    category_totals = Expense.objects.values('category__name').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    context = {
+        'expenses': expenses,
+        'categories': categories,
+        'form': form,
+        'total_expenses': total_expenses,
+        'category_totals': category_totals,
+    }
+    return render(request, 'apps/expenses/list.html', context)
+
+@login_required
+def expense_create(request):
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, request.FILES)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.created_by = request.user
+            expense.save()
+            messages.success(request, f'Expense added successfully!')
+            return redirect('expense_list')
+    else:
+        form = ExpenseForm()
+        form.fields['date'].initial = timezone.now().date()
+    
+    context = {
+        'form': form,
+        'title': 'Add New Expense',
+    }
+    return render(request, 'apps/expenses/form.html', context)
+
+@login_required
+def expense_edit(request, pk):
+    expense = get_object_or_404(Expense, pk=pk)
+    
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, request.FILES, instance=expense)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Expense updated successfully!')
+            return redirect('expense_list')
+    else:
+        form = ExpenseForm(instance=expense)
+    
+    context = {
+        'form': form,
+        'title': 'Edit Expense',
+        'expense': expense,
+    }
+    return render(request, 'apps/expenses/form.html', context)
+
+@login_required
+def expense_delete(request, pk):
+    expense = get_object_or_404(Expense, pk=pk)
+    if request.method == 'POST':
+        expense.delete()
+        messages.success(request, 'Expense deleted successfully!')
+        return redirect('expense_list')
+    
+    return render(request, 'apps/expenses/confirm_delete.html', {'expense': expense})
+
+@login_required
+def expense_category_list(request):
+    categories = ExpenseCategory.objects.all()
+    return render(request, 'apps/expenses/categories.html', {'categories': categories})
+
+@login_required
+def expense_category_create(request):
+    if request.method == 'POST':
+        form = ExpenseCategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Expense category created successfully!')
+            return redirect('expense_category_list')
+    else:
+        form = ExpenseCategoryForm()
+    
+    context = {
+        'form': form,
+        'title': 'Add New Expense Category',
+    }
+    return render(request, 'apps/expenses/category_form.html', context)
+
+@login_required
+def profit_loss_report(request):
+    # Default to current month
+    end_date = request.GET.get('end_date') or timezone.now().date()
+    start_date = request.GET.get('start_date') or (end_date - timedelta(days=30))
+    report_type = request.GET.get('report_type', 'monthly')
+    include_details = request.GET.get('include_details', 'on')
+    
+    # Convert string dates to date objects
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    if isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Calculate sales revenue
+    sales = Sale.objects.filter(created_at__date__range=[start_date, end_date])
+    total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Calculate cost of goods sold (COGS)
+    cogs = 0
+    for sale in sales:
+        for item in sale.items:
+            try:
+                product = Product.objects.get(id=item['product_id'])
+                cogs += item['quantity'] * product.cost_price
+            except Product.DoesNotExist:
+                continue
+    
+    # Calculate expenses
+    expenses = Expense.objects.filter(date__range=[start_date, end_date])
+    total_expenses = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Calculate other income (if any)
+    other_income = 0  # Can be expanded later
+    
+    # Calculate profits
+    gross_profit = total_sales - cogs
+    net_profit = gross_profit - total_expenses + other_income
+    
+    # Expense breakdown by category
+    expense_breakdown = expenses.values('category__name').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Expense breakdown by type
+    expense_by_type = expenses.values('expense_type').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Monthly trend data
+    monthly_data = []
+    current_date = start_date
+    while current_date <= end_date:
+        month_sales = Sale.objects.filter(created_at__date__month=current_date.month,
+                                         created_at__date__year=current_date.year).aggregate(
+            total=Sum('total_amount'))['total'] or 0
+        month_expenses = Expense.objects.filter(date__month=current_date.month,
+                                               date__year=current_date.year).aggregate(
+            total=Sum('amount'))['total'] or 0
+        month_profit = month_sales - month_expenses
+        
+        monthly_data.append({
+            'month': current_date.strftime('%b %Y'),
+            'sales': month_sales,
+            'expenses': month_expenses,
+            'profit': month_profit
+        })
+        
+        # Move to next month
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
+    
+    context = {
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+        'report_type': report_type,
+        'include_details': include_details,
+        'total_sales': total_sales,
+        'cogs': cogs,
+        'total_expenses': total_expenses,
+        'other_income': other_income,
+        'gross_profit': gross_profit,
+        'net_profit': net_profit,
+        'sales': sales[:50] if include_details else [],
+        'expenses': expenses[:50] if include_details else [],
+        'expense_breakdown': expense_breakdown,
+        'expense_by_type': expense_by_type,
+        'monthly_data': monthly_data,
+    }
+    
+    return render(request, 'apps/reports/profit_loss.html', context)
+
+# Add to dashboard view or create context processor
+def expense_summary_context(request):
+    if request.user.is_authenticated:
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+        
+        return {
+            'today_expenses': Expense.objects.filter(date=today).aggregate(Sum('amount'))['amount__sum'] or 0,
+            'month_expenses': Expense.objects.filter(date__gte=month_start).aggregate(Sum('amount'))['amount__sum'] or 0,
+            'recent_expenses': Expense.objects.order_by('-date')[:5],
+        }
+    return {}

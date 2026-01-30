@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from .models import Product, Category, Supplier, StockTransaction, Sale, UserProfile
+from .models import ExpenseCategory, Expense, ProfitLossReport
 
 class CustomLoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={
@@ -102,3 +103,75 @@ class SearchForm(forms.Form):
         'class': 'form-control',
         'placeholder': 'Search...'
     }))
+
+
+# Add these forms to your existing forms.py
+
+class ExpenseCategoryForm(forms.ModelForm):
+    class Meta:
+        model = ExpenseCategory
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['category', 'expense_type', 'description', 'amount', 
+                  'payment_method', 'reference_number', 'date', 'receipt']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'expense_type': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
+            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'reference_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+
+class ProfitLossReportForm(forms.Form):
+    report_type = forms.ChoiceField(
+        choices=ProfitLossReport.REPORT_PERIODS,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        initial='monthly'
+    )
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        required=True
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        required=True
+    )
+    include_details = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+class ExpenseFilterForm(forms.Form):
+    category = forms.ModelChoiceField(
+        queryset=ExpenseCategory.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    expense_type = forms.ChoiceField(
+        choices=[('', 'All Types')] + Expense.EXPENSE_TYPES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    payment_method = forms.ChoiceField(
+        choices=[('', 'All Methods')] + Expense.PAYMENT_METHODS,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )

@@ -158,7 +158,7 @@
                                     </td>
                                     <td>{{ product.name }}</td>
                                     <td>{{ product.quantity }}</td>
-                                    <td class="fw-bold">${{ product.revenue|floatformat:2 }}</td>
+                                    <td class="fw-bold">TZS {{ product.revenue|floatformat:2 }}</td>
                                     <td> TZS {{ product.avg_price|floatformat:2 }}</td>
                                 </tr>
                                 {% empty %}

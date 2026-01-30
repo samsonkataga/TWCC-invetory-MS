@@ -1,0 +1,102 @@
+{% extends 'apps/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - Inventory System{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'expense_list' %}">Expenses</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+            
+            <h2 class="h4 mb-0"><i class="fas fa-{% if expense %}edit{% else %}plus{% endif %} me-2"></i>{{ title }}</h2>
+            <p class="text-muted">{% if expense %}Edit expense details{% else %}Record a new business expense{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.category|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.expense_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.amount|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.date|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.payment_method|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.reference_number|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.receipt|as_crispy_field }}
+                            {% if expense.receipt %}
+                            <div class="mt-2">
+                                <p>Current receipt: 
+                                    <a href="{{ expense.receipt.url }}" target="_blank">
+                                        <i class="fas fa-file-pdf"></i> View Receipt
+                                    </a>
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'expense_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Save Expense
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="fas fa-lightbulb me-2"></i> Tips for Recording Expenses
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Always attach receipts for better record keeping</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Use reference numbers for bank transactions</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Categorize expenses properly for better reports</li>
+                        <li><i class="fas fa-check text-success me-2"></i> Record expenses promptly for accurate financial reporting</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

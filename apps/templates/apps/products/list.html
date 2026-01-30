@@ -80,8 +80,8 @@
                                 <br><small class="text-danger">Low Stock!</small>
                                 {% endif %}
                             </td>
-                            <td>${{ product.price|floatformat:2 }}</td>
-                            <td>${{ product.total_value|floatformat:2 }}</td>
+                            <td>TZS {{ product.price|floatformat:2 }}</td>
+                            <td>TZS {{ product.total_value|floatformat:2 }}</td>
                             <td>
                                 {% if product.quantity == 0 %}
                                 <span class="badge bg-danger">Out of Stock</span>
